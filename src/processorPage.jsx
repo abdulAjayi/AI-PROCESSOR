@@ -3,6 +3,7 @@ const ProcessorPage = () => {
     const [inputText, setInputText] = useState("")
     const [outputText, setOutputText] = useState([])
     const [language, setLanguage] = useState("")
+    const [showIntro, setShowIntro] = useState(true);
     const handleInputChange = (e) =>{
         setInputText(e.target.value)
         console.log(inputText);
@@ -12,7 +13,7 @@ const ProcessorPage = () => {
     const HandleSubmit = async(e) =>{
         e.preventDefault()
         if(inputText.trim() !== ""){
-            setOutputText([...outputText, {text: inputText, language: "detecting...", summary: "", translated: "translating..."}])
+            setOutputText([...outputText, {text: inputText, language: "detecting...", summary: "", translated: ""}])
         }
         setInputText("")
         // console.log(inputText.text.length);
@@ -24,18 +25,23 @@ const ProcessorPage = () => {
                     index === prev.length - 1 ? {...msg, language:detectL} : msg
                 ))
             })
+            setShowIntro(false)
         } catch (error) {
             console.error("language detection failed", error)
         }
     }
     const detectLanguage = async (text) =>{
         if("ai" in window && "languageDetector" in window.ai){
+            console.log("ai" in window && "languageDetector" in window.ai);
+            
             try {
                 const detectL = await window.ai.languageDetector.create()
                 const result = await detectL.detect(text)
+                
                 if(text.length > 0 ) {
                     return result[0].detectedLanguage
                 }
+                console.log(result);
             } catch (error) {
                 console.error("couldn't detect language", error)
             }
@@ -100,37 +106,51 @@ const ProcessorPage = () => {
         setLanguage(e.target.value)
     }
     
-    const getTranslatedText = async(message, target, sourceLanguage) =>{
-        
-        if(!sourceLanguage) {
-            console.error("source language is not defined.")
-            return "source language not defined"
-        }
-
+    const getTranslatedText = async(text, targetLanguage, sourceLanguage) =>{
         if("ai" in window && "translator" in window.ai){
-            const translatorCapabilities = await window.ai.translator.capabilities()
-            // const you = translatorCapabilities.languagePairAvailable('es', 'fr');
-            console.log(translatorCapabilities);
-            
-            
-            
-            // try {
-            //     const translator = await window.ai.translator.create({
-            //         sourceLanguage: sourceLanguage, 
-            //         targetLanguage: target
-            //     });
-            //     const result = await translator.translate(message, target)
-            //     if(result && result.translatedText){
-            //         return result.translatedText
-            //     }
-            //     else{
-            //         console.error("translation API response missing translatedText")
-            //         return "Translation failed: Invalid API response"
-            //     }
-            // } catch (error) {
-            //     console.error("couldn't translate", error)
-            //     return `Translation failed: ${error.message}`
-            // }
+            const translatorCapabilities = await window.ai.translator.capabilities();
+	if (sourceLanguage === targetLanguage) {
+		return text;
+	}
+	const canDetect = translatorCapabilities.languagePairAvailable(sourceLanguage, targetLanguage);
+	console.log("Can detect:", canDetect);
+	let translator;
+	if (canDetect === "no") {
+		// The language detector isn't usable.
+		return;
+	}
+	if (canDetect === "readily") {
+		// The language detector can immediately be used.
+		translator = await window.ai.translator.create({
+			sourceLanguage,
+			targetLanguage,
+		});
+		console.log({
+			sourceLanguage,
+			targetLanguage,
+		});
+	} else {
+		// The language detector can be used after model download.
+		translator = await window.ai.translator.create({
+			sourceLanguage,
+			targetLanguage,
+			monitor(m) {
+				m.addEventListener("downloadprogress", (e) => {
+					console.log(`Downloaded ${e.loaded} of ${e.total} bytes.`);
+				});
+			},		});
+		await translator.ready;
+	}
+	
+	try {
+		const response = await translator.translate(text);
+		return response;
+	} catch (error) {
+		console.error("Error translating text:", error);
+		throw error;
+	}
+
+
         }
     }
     const handleTranslateClick = async(index) =>{
@@ -156,11 +176,16 @@ const ProcessorPage = () => {
         
         return ( 
             <div>
-                <div className="flex justify-center">
-                <div className="flex justify-between mb-10 items-center w-[85vw]">
-                    <p className="text-gray-300 text-2xl">AI TextProcessor</p>
-                <select name="" id="" className="border border-gray-600  bg-light1 text-gray-300 text-lg rounded-2xl px-4 py-1 outline-none" onChange={handleLanguageChange} value={language}>
-                <option value="">select language</option>
+                {showIntro && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <h1 className="text-2xl text-gray-300">Words have power. What will yours say?</h1>
+        </div>
+      )}
+                <div className="mx-auto w-[80vw] md:w-[75vw] lg:w-[65vw] xl:w-[60vw]">
+                <div className="flex justify-between mb-10 items-center">
+                    <p className="text-gray-300 text-2xl">TextAI</p>
+                <select name="" id="" className="border border-gray-600  bg-light1 text-gray-300 text-lg rounded-2xl px-4 py-1 outline-none cursor-pointer" onChange={handleLanguageChange} >
+                <option value="">select languages</option>
                 <option value="pt">Portuguese(Pt)</option>
                 <option value="en">English(En)</option>
                 <option value="es">Spanish(Es)</option>
@@ -170,7 +195,7 @@ const ProcessorPage = () => {
             </select>
                 </div>
                 </div>
-            <div className="w-[85vw] mx-auto p-4 space-y-16 mb-11 pb-40">
+            <div className="w-[80vw] mx-auto space-y-16 mb-11 pb-40 md:w-[75vw] lg:w-[65vw] xl:w-[60vw] mt-14">
         {outputText.map((output, index) =>(
             <div className="relative" key={index} >
             <div className="flex justify-end ">
@@ -182,18 +207,18 @@ const ProcessorPage = () => {
                 <button className="text-gray-300  px-3 py-1 bg-deep2  border border-lightText rounded-full" onClick={ () => handleSummarizeClick(index)}>summarize</button>
             )}
             <button className="text-gray-300  px-3 py-1 bg-deep2  border border-lightText rounded-full" onClick={ () => {handleTranslateClick(index)}}>Translate</button>
-            <button className="text-gray-300  px-3 py-1 bg-deep2  border border-lightText rounded-full">detected: {output.language}</button>
+            <button className="text-gray-300  px-3 py-1 bg-deep2  border border-lightText rounded-full">{output.language}</button>
         </div>
         
     {output.summary && (
         <div className="flex justify-start">
-            <p className="gap-y-6 flex-col border border-gray-600  bg-light1 text-gray-300 rounded-2xl px-10 py-6 mt-16 ">{output.summary}</p>
+            <p className="gap-y-6 flex-col border border-gray-600  bg-light1 text-gray-300 rounded-2xl  px-4 py-3 mt-16 ">{output.summary}</p>
     </div>
             )}
 
             {output.translated &&(
                 <div className="flex justify-start">
-                <p className="gap-y-6 flex-col border border-gray-600  bg-light1 text-gray-300 rounded-2xl px-10 py-6 mt-16 ">{output.translated}</p>
+                <p className="gap-y-6 border border-gray-600  bg-light1 text-gray-300 rounded-2xl px-4 py-3 mt-16">{output.translated}</p>
         </div>
             )}
     
@@ -207,7 +232,7 @@ const ProcessorPage = () => {
     } */}
     </div>
     <div className="left-1/2 transform -translate-x-1/2  fixed bottom-0 bg-light1 rounded-md px-1 pb-4 pt-1">
-    <form action="" className="w-[85vw] bg-deep2 px-2 py-2 rounded-lg" onSubmit={HandleSubmit}>
+    <form action="" className="w-[80vw] md:w-[75vw] lg:w-[65vw] xl:w-[60vw] bg-deep2 px-2 py-2 rounded-lg" onSubmit={HandleSubmit}>
         <div className="">
             <textarea onChange={handleInputChange} value={inputText} name="" id="" className="bg-transparent border-transparent resize-none w-full outline-none border-b-light1 border scrollbar-hide text-gray-300 " placeholder="what's on your mind 😃? "></textarea>
             <div className="flex justify-between mb-2">
