@@ -51,21 +51,6 @@ const ProcessorPage = () => {
     }
 
     const handleSummarizeFetch = async(text) => {
-        // try {
-        //     const summarizeApi = await fetch("https://api-inference.huggingface.co/models/facebook/bart-large-cnn", {
-        //         method :"POST",
-        //         headers:{
-        //             "Content-Type": "application/json",
-        //             Authorization: "Bearer YOUR_HUGGINGFACE_API_KEY",
-        //         },
-        //         body: JSON.stringify({text})
-
-        //     });
-        //     const data = await summarizeApi.json()
-        //     return data.summary
-        // } catch (error) {
-        //     console.error("pls select the right choice", error)
-        // }
         console.log("ai" in window, "summarizer" in window.ai);
         if ("ai" in window && "summarizer" in window.ai) {
             try {
@@ -74,8 +59,8 @@ const ProcessorPage = () => {
               // Use the summarizer to summarize the provided text.
               const result = await summarizer.summarize(text);
               // Assume the API returns an object with a `summary` property.
-              if (result && result.summary) {
-                return result.summary;
+              if (result) {
+                return result
               }
             } catch (error) {
               console.error("Summarizer API error:", error);
@@ -92,6 +77,8 @@ const ProcessorPage = () => {
         
         try {
             const summary = await handleSummarizeFetch(message.text)
+            console.log(summary);
+            
             setOutputText((prev) =>{
                 return prev.map( (msg, idx) =>{
                     return idx === index ? {...msg, summary} : msg
@@ -165,6 +152,7 @@ const ProcessorPage = () => {
             })
         } catch (error) {
             console.error("Error translating text", error)
+            
             setOutputText((prev) => {
                 return prev.map((msg, idx) => {
                     return idx === index? {...msg, translated: "translation failed"} : msg
@@ -172,8 +160,6 @@ const ProcessorPage = () => {
             })
         }
         }
-        
-        
         return ( 
             <div>
                 {showIntro && (
@@ -182,9 +168,10 @@ const ProcessorPage = () => {
         </div>
       )}
                 <div className="mx-auto w-[80vw] md:w-[75vw] lg:w-[65vw] xl:w-[60vw]">
-                <div className="flex justify-between mb-10 items-center">
+                <div className="flex justify-between mb-10 items-center fixed top-0 mx-auto w-[80vw] md:w-[75vw] lg:w-[65vw] xl:w-[60vw] z-10 bg-deep1 border-b border-b-detectionText p-4">
                     <p className="text-gray-300 text-2xl">TextAI</p>
                 <select name="" id="" className="border border-gray-600  bg-light1 text-gray-300 text-lg rounded-2xl px-4 py-1 outline-none cursor-pointer" onChange={handleLanguageChange} >
+
                 <option value="">select languages</option>
                 <option value="pt">Portuguese(Pt)</option>
                 <option value="en">English(En)</option>
@@ -203,7 +190,7 @@ const ProcessorPage = () => {
                 
             </div>
         <div className="flex gap-x-3 right-0 mt-1 absolute">
-            {output.language === "en" && output.text.length > 15 && !output.summary &&(
+            {output.language === "en" && output.text.length > 150 && !output.summary &&(
                 <button className="text-gray-300  px-3 py-1 bg-deep2  border border-lightText rounded-full" onClick={ () => handleSummarizeClick(index)}>summarize</button>
             )}
             <button className="text-gray-300  px-3 py-1 bg-deep2  border border-lightText rounded-full" onClick={ () => {handleTranslateClick(index)}}>Translate</button>
