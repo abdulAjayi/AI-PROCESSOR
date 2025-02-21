@@ -164,7 +164,7 @@ const ProcessorPage = () => {
             <div>
                 {showIntro && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <h1 className="text-2xl text-gray-300">Words have power. What will yours say?</h1>
+          <h1 className="text-2xl text-gray-300 w-[80vw] md:w-[75vw] lg:w-[65vw] xl:w-[60vw] m-auto">Words have power. What will yours say?</h1>
         </div>
       )}
                 <div className="mx-auto w-[80vw] md:w-[75vw] lg:w-[65vw] xl:w-[60vw]">
