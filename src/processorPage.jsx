@@ -4,6 +4,7 @@ const ProcessorPage = () => {
     const [outputText, setOutputText] = useState([])
     const [language, setLanguage] = useState("")
     const [showIntro, setShowIntro] = useState(true);
+    const [errormsg, setErrormsg] = useState(null);
     const handleInputChange = (e) =>{
         setInputText(e.target.value)
         console.log(inputText);
@@ -43,7 +44,7 @@ const ProcessorPage = () => {
                 }
                 console.log(result);
             } catch (error) {
-                console.error("couldn't detect language", error)
+                console.error("couldn't detect language", error.message)
             }
             
         }
@@ -63,10 +64,9 @@ const ProcessorPage = () => {
                 return result
               }
             } catch (error) {
-              console.error("Summarizer API error:", error);
+                setErrormsg("sorry, your browser doesnt support this feature:", error); 
             }
           }
-          return "Error summarizing text";
     }
 
     const handleSummarizeClick = async(index) =>{
@@ -85,7 +85,9 @@ const ProcessorPage = () => {
                 })
             })
         } catch (error) {
-            console.error("pls do the write thins", error)
+            // setErrormsg("sorry, your browser doesnt support this feature:", error.message); 
+            console.log(errormsg);
+            
         }
     }
 
@@ -104,8 +106,9 @@ const ProcessorPage = () => {
 	let translator;
 	if (canDetect === "no") {
 		// The language detector isn't usable.
-		return;
+        return
 	}
+    
 	if (canDetect === "readily") {
 		// The language detector can immediately be used.
 		translator = await window.ai.translator.create({
@@ -133,8 +136,7 @@ const ProcessorPage = () => {
 		const response = await translator.translate(text);
 		return response;
 	} catch (error) {
-		console.error("Error translating text:", error);
-		throw error;
+        // setErrormsg(error.msg); 
 	}
 
 
@@ -144,27 +146,21 @@ const ProcessorPage = () => {
         const message = outputText[index]
         try {
             const translatedtext = await getTranslatedText(message.text, language,message.language)
-
+            setErrormsg(null)
             setOutputText((prev) => {
                 return prev.map((msg, idx) => {
                     return idx === index? {...msg, translated: translatedtext} : msg
                 })
             })
         } catch (error) {
-            console.error("Error translating text", error)
-            
-            setOutputText((prev) => {
-                return prev.map((msg, idx) => {
-                    return idx === index? {...msg, translated: "translation failed"} : msg
-                })
-            })
+            setErrormsg(error)
         }
         }
         return ( 
             <div>
                 {showIntro && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <h1 className="text-2xl text-gray-300 w-[80vw] md:w-[75vw] lg:w-[65vw] xl:w-[60vw] m-auto">Words have power. What will yours say?</h1>
+                    <div className="absolute inset-0 flex items-center justify-center">
+          <h1 className="text-2xl text-gray-300 w-[80vw] md:w-[75vw] lg:w-[65vw] xl:w-[60vw] mx-auto">Words have power. What will yours say?</h1>
         </div>
       )}
                 <div className="mx-auto w-[80vw] md:w-[75vw] lg:w-[65vw] xl:w-[60vw]">
@@ -196,7 +192,7 @@ const ProcessorPage = () => {
             <button className="text-gray-300  px-3 py-1 bg-deep2  border border-lightText rounded-full" onClick={ () => {handleTranslateClick(index)}}>Translate</button>
             <button className="text-gray-300  px-3 py-1 bg-deep2  border border-lightText rounded-full">{output.language}</button>
         </div>
-        
+        {output.errormsg && <p className="text-white">{output.Error}</p>}
     {output.summary && (
         <div className="flex justify-start">
             <p className="gap-y-6 flex-col border border-gray-600  bg-light1 text-gray-300 rounded-2xl  px-4 py-3 mt-16 ">{output.summary}</p>
@@ -211,12 +207,6 @@ const ProcessorPage = () => {
     
         </div>
 ))}
-{/* {currentSummary ? (
-<div className="flex gap-y-6 flex-col border border-gray-600  bg-light1 text-gray-300 rounded-2xl p-6 justify-start">
-    <p>{currentSummary}</p>
-</div>
-): ( <p>No summary available yet.</p>)
-    } */}
     </div>
     <div className="left-1/2 transform -translate-x-1/2  fixed bottom-0 bg-light1 rounded-md px-1 pb-4 pt-1">
     <form action="" className="w-[80vw] md:w-[75vw] lg:w-[65vw] xl:w-[60vw] bg-deep2 px-2 py-2 rounded-lg" onSubmit={HandleSubmit}>
